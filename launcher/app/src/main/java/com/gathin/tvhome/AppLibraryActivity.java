@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
+import android.graphics.Outline;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -16,7 +17,9 @@ import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -44,7 +47,6 @@ public class AppLibraryActivity extends Activity {
     private CatalogAdapter adapter;
     private PopupWindow actionPopup;
     private String selectedPackage;
-    private long catalogTime;
     private Config config;
 
     @Override protected void onCreate(Bundle state) {
@@ -57,9 +59,14 @@ public class AppLibraryActivity extends Activity {
         filter = findViewById(R.id.appLibraryFilter);
         empty = findViewById(R.id.appLibraryEmpty);
         adapter = new CatalogAdapter();
-        grid.setLayoutManager(new GridLayoutManager(this, 6));
+        grid.setLayoutManager(new GridLayoutManager(this, AppLibraryLayout.columns()));
         grid.setItemAnimator(null);
         grid.setAdapter(adapter);
+        grid.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (right - left != oldRight - oldLeft) {
+                grid.post(() -> adapter.setGridWidth(grid.getWidth()));
+            }
+        });
         findViewById(R.id.appLibraryBack).setOnClickListener(view -> finish());
         filter.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
@@ -85,7 +92,6 @@ public class AppLibraryActivity extends Activity {
     private void refreshCatalog() {
         allApps.clear();
         allApps.addAll(AppLibraryCatalog.load(this, homePackages));
-        catalogTime = System.currentTimeMillis();
         applyFilter();
     }
 
@@ -96,7 +102,7 @@ public class AppLibraryActivity extends Activity {
         empty.setVisibility(visibleApps.isEmpty() ? View.VISIBLE : View.GONE);
         grid.setVisibility(visibleApps.isEmpty() ? View.GONE : View.VISIBLE);
         adapter.notifyDataSetChanged();
-        focusSelected();
+        if (AppLibraryPresentation.shouldFocusGrid(filter != null && filter.hasFocus())) focusSelected();
     }
 
     private void focusSelected() {
@@ -218,12 +224,29 @@ public class AppLibraryActivity extends Activity {
     }
 
     private final class CatalogAdapter extends RecyclerView.Adapter<CatalogHolder> {
+        private AppLibraryLayout.Geometry geometry;
+
+        void setGridWidth(int width) {
+            if (width <= 0) return;
+            AppLibraryLayout.Geometry updated = AppLibraryLayout.geometry(width, AppLibraryLayout.columns(),
+                    getResources().getDisplayMetrics().density);
+            if (geometry != null && geometry.tileWidthPx == updated.tileWidthPx) return;
+            geometry = updated;
+            notifyDataSetChanged();
+        }
+
         @NonNull @Override public CatalogHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             View view = getLayoutInflater().inflate(R.layout.item_app_library, parent, false);
             return new CatalogHolder(view);
         }
 
         @Override public void onBindViewHolder(@NonNull CatalogHolder holder, int position) {
+            applyGeometry(holder);
+            boolean cardFocused = holder.card.isFocused();
+            float scale = AppLibraryPresentation.tileScale(cardFocused);
+            holder.card.setScaleX(scale);
+            holder.card.setScaleY(scale);
+            holder.card.setTranslationZ(cardFocused ? dp(6) : 0);
             AppLibraryCatalog.Entry entry = visibleApps.get(position);
             Drawable banner = banner(entry);
             if (banner != null) {
@@ -241,9 +264,9 @@ public class AppLibraryActivity extends Activity {
             }
             holder.name.setText(entry.label);
             boolean onHome = isOnHome(entry);
-            boolean recent = LibraryApps.recent(entry.installedAt, catalogTime);
-            holder.status.setText(onHome ? R.string.library_on_home
-                    : recent ? R.string.library_recent : R.string.library_add_home);
+            holder.homeBadge.setVisibility(AppLibraryPresentation.showHomeBadge(onHome)
+                    ? View.VISIBLE : View.GONE);
+            holder.status.setVisibility(AppLibraryPresentation.showStatus() ? View.VISIBLE : View.GONE);
             holder.card.setOnClickListener(view -> {
                 if (isOnHome(entry)) open(entry); else changeHome(entry, true);
             });
@@ -253,14 +276,49 @@ public class AppLibraryActivity extends Activity {
             });
             holder.card.setOnFocusChangeListener((view, focused) -> {
                 if (focused) selectedPackage = entry.packageName;
+                float focusScale = AppLibraryPresentation.tileScale(focused);
+                view.animate().cancel();
+                view.setTranslationZ(focused ? dp(6) : 0);
+                view.animate().scaleX(focusScale).scaleY(focusScale).setDuration(160).start();
             });
             holder.card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
-                return keyCode == KeyEvent.KEYCODE_DPAD_LEFT && holder.getBindingAdapterPosition() % 6 == 0;
+                return keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                        && holder.getBindingAdapterPosition() % AppLibraryLayout.columns() == 0;
             });
         }
 
         @Override public int getItemCount() { return visibleApps.size(); }
+
+        private void applyGeometry(CatalogHolder holder) {
+            if (geometry == null) {
+                int width = grid.getWidth();
+                if (width <= 0) return;
+                geometry = AppLibraryLayout.geometry(width, AppLibraryLayout.columns(),
+                        getResources().getDisplayMetrics().density);
+            }
+            ViewGroup.LayoutParams itemParams = holder.itemView.getLayoutParams();
+            if (itemParams != null) {
+                itemParams.height = geometry.itemHeightPx;
+                holder.itemView.setLayoutParams(itemParams);
+            }
+            setWidthAndHeight(holder.card, geometry.tileWidthPx, geometry.tileHeightPx, 0);
+            setWidthAndHeight(holder.name, geometry.tileWidthPx, 22, geometry.tileHeightPx + dp(7));
+            setWidthAndHeight(holder.status, geometry.tileWidthPx, 18, geometry.tileHeightPx + dp(29));
+            FrameLayout.LayoutParams homeBadgeParams = (FrameLayout.LayoutParams) holder.homeBadge.getLayoutParams();
+            int homeBadgeSize = dp(AppLibraryPresentation.homeBadgeDiameterDp());
+            homeBadgeParams.width = homeBadgeSize;
+            homeBadgeParams.height = homeBadgeSize;
+            holder.homeBadge.setLayoutParams(homeBadgeParams);
+        }
+
+        private void setWidthAndHeight(View view, int width, int heightDp, int topMargin) {
+            FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
+            params.width = width;
+            params.height = heightDp == geometry.tileHeightPx ? heightDp : dp(heightDp);
+            params.topMargin = topMargin;
+            view.setLayoutParams(params);
+        }
     }
 
     private static final class CatalogHolder extends RecyclerView.ViewHolder {
@@ -268,15 +326,24 @@ public class AppLibraryActivity extends Activity {
         final ImageView banner;
         final ImageView icon;
         final TextView label;
+        final ImageView homeBadge;
         final TextView name;
         final TextView status;
 
         CatalogHolder(View view) {
             super(view);
             card = view.findViewById(R.id.card);
+            float cornerRadius = 16 * view.getResources().getDisplayMetrics().density;
+            card.setOutlineProvider(new ViewOutlineProvider() {
+                @Override public void getOutline(View target, Outline outline) {
+                    outline.setRoundRect(0, 0, target.getWidth(), target.getHeight(), cornerRadius);
+                }
+            });
+            card.setClipToOutline(true);
             banner = view.findViewById(R.id.banner);
             icon = view.findViewById(R.id.icon);
             label = view.findViewById(R.id.label);
+            homeBadge = view.findViewById(R.id.homeBadge);
             name = view.findViewById(R.id.name);
             status = view.findViewById(R.id.status);
         }
