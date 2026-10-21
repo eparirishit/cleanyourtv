@@ -16,7 +16,7 @@
 - Do not alter the active Home handler or recovery launcher state.
 - Preserve Browser, Apple TV, Desktop Launcher, StarShare, Prime Video, and the configured dock.
 - Include Leanback and ordinary launcher apps, including `com.netflix.mediaclient`.
-- Use a dark full-screen screen with back control, heading, filter, six columns, and generous vertical spacing.
+- Use a dark full-screen screen with back control, heading, filter, six columns, generous vertical spacing, and the dashboard's wide banner-or-icon tile style.
 - Keep press-to-open/add and long-press Open, Add/Remove from Home, and App info behavior reversible.
 - Build and install only as an in-place package update; never reset launcher data.
 

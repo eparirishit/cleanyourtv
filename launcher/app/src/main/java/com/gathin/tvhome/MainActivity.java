@@ -210,7 +210,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean dockEditing;
     /** Dock place being changed in edit-dock mode, or -1 while the place is still being chosen. */
     private int dockEditSlot = -1;
-    private AppLibraryDialog appLibrary;
     private boolean libraryFocusPending;
     private RecyclerView.OnScrollListener pendingFocusScroll;
 
@@ -259,7 +258,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (Intent.ACTION_PACKAGE_REMOVED.equals(intent.getAction())
                     && intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)) return;
             reloadApps(false);
-            if (appLibrary != null) appLibrary.refresh();
         }
     };
     // Right after boot the clock is often wrong until network time arrives; don't wait a minute to catch up.
@@ -634,6 +632,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == LAUNCHER_SETTINGS_REQUEST && resultCode == RESULT_OK) recreate();
+        if (requestCode == AppLibraryActivity.REQUEST_CODE) {
+            libraryFocusPending = true;
+            if (AppLibraryNavigation.shouldReload(requestCode, resultCode)) reloadApps(false);
+            grid.post(() -> {
+                if (libraryFocusPending && hasWindowFocus() && !isFinishing()) focusLibrary();
+            });
+        }
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
@@ -646,7 +651,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Capture the app before rebinding can move focus and overwrite its key.
         final String returnKey = lastFocusedKey;
         final int returnSlot = lastFocused;
-        final boolean restoreFocus = appLibrary == null && (animate || grid.hasFocus());
+        final boolean restoreFocus = animate || grid.hasFocus();
         if (restoreFocus) {
             glassShown = false;
             glass.setAlpha(0f);
@@ -727,7 +732,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelPendingFocusScroll();
         // Nothing of ours stays on screen over another app; an undecided prompt simply returns next time.
         if (cardPrompt != null) cardPrompt.dismiss();
-        if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
     }
 
@@ -744,7 +748,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
-            if (libraryFocusPending && appLibrary == null) focusLibrary();
+            if (libraryFocusPending) focusLibrary();
             showCardPrompt();
         }
     }
@@ -1051,19 +1055,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override
     public void onLibraryRequested() {
-        if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
         libraryFocusPending = false;
-        appLibrary = new AppLibraryDialog(this, animations, reducedMotion, adapter::containsPackage, () -> reloadApps(false), () -> {
-            appLibrary = null;
-            openPopup = null;
-            libraryFocusPending = true;
-            grid.post(() -> {
-                if (libraryFocusPending && appLibrary == null && hasWindowFocus() && !isFinishing()) focusLibrary();
-            });
-        });
-        openPopup = appLibrary.popup;
-        appLibrary.show();
+        ArrayList<String> homePackages = new ArrayList<>();
+        for (int position = 0; position < adapter.appCount(); position++) {
+            String packageName = adapter.packageAt(position);
+            if (packageName != null) homePackages.add(packageName);
+        }
+        Intent intent = new Intent(this, AppLibraryActivity.class);
+        intent.putStringArrayListExtra(AppLibraryActivity.EXTRA_HOME_PACKAGES,
+                AppLibraryNavigation.snapshot(homePackages));
+        startActivityForResult(intent, AppLibraryActivity.REQUEST_CODE);
     }
 
     @Override
@@ -1710,7 +1712,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!animations) {
             grid.scrollToPosition(position);
             grid.post(() -> {
-                if (appLibrary != null || !hasWindowFocus()) return;
+                if (!hasWindowFocus()) return;
                 RecyclerView.ViewHolder footer = grid.findViewHolderForAdapterPosition(adapter.appCount());
                 if (footer != null && adapter.isLibraryAt(adapter.appCount())
                         && footer.itemView.findViewById(R.id.btnLibrary).requestFocus()) libraryFocusPending = false;

@@ -20,7 +20,7 @@ Replace CleanYourTV's small App Library popup with a remote-friendly, full-scree
 
 - Initial focus lands on the first app tile, with the filter field directly reachable by remote navigation.
 - Typing filters the displayed applications by label.
-- Each grid tile uses the app's banner or icon and accessible app label. Focus uses the launcher’s existing visual language.
+- Each grid tile uses the dashboard's wide banner-or-icon treatment, including configured banner overrides, with its accessible app label and Home state below. Focus uses the launcher's existing visual language.
 - The app grid scrolls vertically when required; navigation remains predictable with a D-pad remote.
 
 ## Safety And Compatibility

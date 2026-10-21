@@ -1,45 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="176dp"
-    android:layout_marginStart="8dp"
-    android:layout_marginTop="7dp"
-    android:layout_marginEnd="8dp"
-    android:layout_marginBottom="20dp"
-    android:background="@drawable/app_library_tile"
-    android:clickable="true"
-    android:focusable="true"
-    android:gravity="center_horizontal"
-    android:orientation="vertical"
-    android:padding="18dp">
+    android:layout_height="190dp"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:paddingTop="7dp"
+    android:paddingBottom="20dp">
 
-    <ImageView
-        android:id="@+id/icon"
-        android:layout_width="62dp"
-        android:layout_height="62dp"
-        android:contentDescription="@null"
-        android:scaleType="fitCenter" />
+    <FrameLayout
+        android:id="@+id/card"
+        android:layout_width="250dp"
+        android:layout_height="141dp"
+        android:layout_gravity="center_horizontal|top"
+        android:background="@drawable/tile_bg"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/banner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop" />
+
+        <ImageView
+            android:id="@+id/icon"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_gravity="center"
+            android:layout_marginBottom="14dp"
+            android:contentDescription="@null"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:ellipsize="end"
+            android:fontFamily="@font/outfit"
+            android:gravity="center"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="8dp"
+            android:singleLine="true"
+            android:textColor="#FFFFFFFF"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </FrameLayout>
 
     <TextView
-        android:id="@+id/title"
-        android:layout_width="match_parent"
-        android:layout_height="44dp"
-        android:layout_marginTop="13dp"
+        android:id="@+id/name"
+        android:layout_width="250dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="148dp"
         android:ellipsize="end"
         android:fontFamily="@font/outfit_medium"
         android:gravity="center"
-        android:maxLines="2"
-        android:textColor="#F2F4F7"
-        android:textSize="16sp" />
+        android:singleLine="true"
+        android:textColor="#F2FFFFFF"
+        android:textSize="14sp" />
 
     <TextView
         android:id="@+id/status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="250dp"
+        android:layout_height="18dp"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="170dp"
         android:ellipsize="end"
         android:fontFamily="@font/outfit_regular"
         android:gravity="center"
-        android:maxLines="1"
+        android:singleLine="true"
         android:textColor="#A6FFFFFF"
-        android:textSize="12sp" />
-</LinearLayout>
+        android:textSize="11sp" />
+</FrameLayout>

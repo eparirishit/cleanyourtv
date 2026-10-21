@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.Editable;
-import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -42,13 +44,14 @@ public class AppLibraryActivity extends Activity {
     private CatalogAdapter adapter;
     private PopupWindow actionPopup;
     private String selectedPackage;
-    private boolean homeChanged;
     private long catalogTime;
+    private Config config;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         ArrayList<String> packages = getIntent().getStringArrayListExtra(EXTRA_HOME_PACKAGES);
         if (packages != null) homePackages.addAll(packages);
+        config = Config.load(this);
         setContentView(R.layout.activity_app_library);
         grid = findViewById(R.id.appLibraryGrid);
         filter = findViewById(R.id.appLibraryFilter);
@@ -110,7 +113,7 @@ public class AppLibraryActivity extends Activity {
         grid.post(() -> {
             grid.scrollToPosition(target);
             RecyclerView.ViewHolder holder = grid.findViewHolderForAdapterPosition(target);
-            if (holder != null) holder.itemView.requestFocus();
+            if (holder != null) holder.itemView.findViewById(R.id.card).requestFocus();
         });
     }
 
@@ -126,7 +129,6 @@ public class AppLibraryActivity extends Activity {
         HashSet<String> updatedHome = AppLibraryCatalog.withHomeState(homePackages, entry.packageName, onHome);
         homePackages.clear();
         homePackages.addAll(updatedHome);
-        homeChanged = true;
         setResult(RESULT_OK);
         selectedPackage = entry.packageName;
         dismissActions();
@@ -186,6 +188,31 @@ public class AppLibraryActivity extends Activity {
         if (popup != null) popup.dismiss();
     }
 
+    private Drawable banner(AppLibraryCatalog.Entry entry) {
+        String configured = config.appBanners.get(entry.packageName);
+        if (configured != null && configured.startsWith("banner_")) {
+            int resourceId = getResources().getIdentifier(configured, "drawable", getPackageName());
+            if (resourceId != 0) return getDrawable(resourceId);
+        }
+        PackageManager packageManager = getPackageManager();
+        int resourceId = entry.resolveInfo.activityInfo.banner;
+        if (resourceId == 0) resourceId = entry.resolveInfo.activityInfo.applicationInfo.banner;
+        Drawable banner = null;
+        if (resourceId != 0) {
+            try {
+                Resources resources = packageManager.getResourcesForApplication(
+                        entry.resolveInfo.activityInfo.applicationInfo);
+                int density = Math.max(android.util.DisplayMetrics.DENSITY_XHIGH,
+                        getResources().getDisplayMetrics().densityDpi);
+                banner = resources.getDrawableForDensity(resourceId, density, null);
+            } catch (PackageManager.NameNotFoundException | Resources.NotFoundException ignored) {
+            }
+        }
+        if (banner == null) banner = entry.resolveInfo.activityInfo.loadBanner(packageManager);
+        return banner != null && AppAdapter.isBannerShaped(banner.getIntrinsicWidth(), banner.getIntrinsicHeight())
+                ? banner : null;
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
@@ -198,23 +225,36 @@ public class AppLibraryActivity extends Activity {
 
         @Override public void onBindViewHolder(@NonNull CatalogHolder holder, int position) {
             AppLibraryCatalog.Entry entry = visibleApps.get(position);
-            holder.icon.setImageDrawable(entry.resolveInfo.loadIcon(getPackageManager()));
-            holder.title.setText(entry.label);
+            Drawable banner = banner(entry);
+            if (banner != null) {
+                holder.banner.setImageDrawable(banner);
+                holder.banner.setVisibility(View.VISIBLE);
+                holder.icon.setVisibility(View.GONE);
+                holder.label.setVisibility(View.GONE);
+            } else {
+                holder.banner.setImageDrawable(null);
+                holder.banner.setVisibility(View.GONE);
+                holder.icon.setImageDrawable(entry.resolveInfo.loadIcon(getPackageManager()));
+                holder.icon.setVisibility(View.VISIBLE);
+                holder.label.setText(entry.label);
+                holder.label.setVisibility(View.VISIBLE);
+            }
+            holder.name.setText(entry.label);
             boolean onHome = isOnHome(entry);
             boolean recent = LibraryApps.recent(entry.installedAt, catalogTime);
             holder.status.setText(onHome ? R.string.library_on_home
                     : recent ? R.string.library_recent : R.string.library_add_home);
-            holder.itemView.setOnClickListener(view -> {
+            holder.card.setOnClickListener(view -> {
                 if (isOnHome(entry)) open(entry); else changeHome(entry, true);
             });
-            holder.itemView.setOnLongClickListener(view -> {
+            holder.card.setOnLongClickListener(view -> {
                 showActions(entry, view);
                 return true;
             });
-            holder.itemView.setOnFocusChangeListener((view, focused) -> {
+            holder.card.setOnFocusChangeListener((view, focused) -> {
                 if (focused) selectedPackage = entry.packageName;
             });
-            holder.itemView.setOnKeyListener((view, keyCode, event) -> {
+            holder.card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
                 return keyCode == KeyEvent.KEYCODE_DPAD_LEFT && holder.getBindingAdapterPosition() % 6 == 0;
             });
@@ -224,14 +264,20 @@ public class AppLibraryActivity extends Activity {
     }
 
     private static final class CatalogHolder extends RecyclerView.ViewHolder {
+        final View card;
+        final ImageView banner;
         final ImageView icon;
-        final TextView title;
+        final TextView label;
+        final TextView name;
         final TextView status;
 
         CatalogHolder(View view) {
             super(view);
+            card = view.findViewById(R.id.card);
+            banner = view.findViewById(R.id.banner);
             icon = view.findViewById(R.id.icon);
-            title = view.findViewById(R.id.title);
+            label = view.findViewById(R.id.label);
+            name = view.findViewById(R.id.name);
             status = view.findViewById(R.id.status);
         }
     }
