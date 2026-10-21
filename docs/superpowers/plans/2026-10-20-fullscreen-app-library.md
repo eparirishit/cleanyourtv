@@ -59,7 +59,7 @@ Test that a Leanback entry wins over a duplicate normal-launcher entry, a mobile
 
 - [ ] **Step 2: Run the focused test to verify it fails**
 
-Run: `./gradlew test --tests com.gathin.tvhome.AppLibraryCatalogTest`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:testDebugUnitTest --tests com.gathin.tvhome.AppLibraryCatalogTest --offline --console=plain`
 
 Expected: FAIL because `AppLibraryCatalog` does not exist.
 
@@ -69,7 +69,7 @@ Implement `load(Context context, Set<String> homePackages)` by querying both lau
 
 - [ ] **Step 4: Run focused and adjacent tests**
 
-Run: `./gradlew test --tests com.gathin.tvhome.AppLibraryCatalogTest --tests com.gathin.tvhome.LibraryAppsTest`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:testDebugUnitTest --tests com.gathin.tvhome.AppLibraryCatalogTest --tests com.gathin.tvhome.LibraryAppsTest --offline --console=plain`
 
 Expected: PASS.
 
@@ -97,7 +97,7 @@ Extend `AppLibraryCatalogTest` to prove adding a non-Home package marks only tha
 
 - [ ] **Step 2: Run the focused test to verify it fails**
 
-Run: `./gradlew test --tests com.gathin.tvhome.AppLibraryCatalogTest`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:testDebugUnitTest --tests com.gathin.tvhome.AppLibraryCatalogTest --offline --console=plain`
 
 Expected: FAIL until the selection and Home-state helpers exist.
 
@@ -107,7 +107,7 @@ Create a private landscape activity with black background, focusable Back contro
 
 - [ ] **Step 4: Verify debug behavior**
 
-Run: `./gradlew assembleDebug --offline --console=plain`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew assembleDebug --offline --console=plain`
 
 Expected: SUCCESS with no new runtime permission or exported activity. Install as an in-place update and verify six columns, filter reachability, mobile Netflix, add/remove round trip, long-press actions, Back, and App Info return using the projector remote.
 
@@ -132,7 +132,7 @@ Add a package-private handoff helper with a test that proves a Home package snap
 
 - [ ] **Step 2: Run the focused test to verify it fails**
 
-Run: `./gradlew test --tests com.gathin.tvhome.AppLibraryNavigationTest`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:testDebugUnitTest --tests com.gathin.tvhome.AppLibraryNavigationTest --offline --console=plain`
 
 Expected: FAIL because the activity-result handoff does not yet exist.
 
@@ -142,7 +142,7 @@ Remove popup state, refresh calls, and popup-focus callbacks from `MainActivity`
 
 - [ ] **Step 4: Run full verification and projector acceptance**
 
-Run: `./gradlew test assembleRelease --offline --console=plain`
+Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:testDebugUnitTest assembleRelease --offline --console=plain`
 
 Expected: SUCCESS. Install `app/build/outputs/apk/release/app-release.apk` as an in-place update. Confirm via ADB that `com.gathin.tvhome/.MainActivity` remains the Home activity, then verify All Apps opens full-screen, Netflix appears, six-column remote navigation and filtering work, long-press actions work, Back returns to the footer, and the dock remains `Netflix → Prime Video → Apple TV → YouTube`.
 
