@@ -8,6 +8,7 @@ import android.content.pm.ResolveInfo;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -71,6 +72,17 @@ final class AppLibraryCatalog {
             if (entry.label.toLowerCase(Locale.getDefault()).contains(needle)) matches.add(entry);
         }
         return matches;
+    }
+
+    static HashSet<String> withHomeState(Set<String> homePackages, String packageName, boolean onHome) {
+        HashSet<String> updated = new HashSet<>(homePackages);
+        if (onHome) updated.add(packageName); else updated.remove(packageName);
+        return updated;
+    }
+
+    static String selectionAfterFilter(List<Entry> catalog, String selectedPackage) {
+        for (Entry entry : catalog) if (entry.packageName.equals(selectedPackage)) return selectedPackage;
+        return catalog.isEmpty() ? null : catalog.get(0).packageName;
     }
 
     private static List<Entry> entries(Context context, PackageManager packageManager, String category,

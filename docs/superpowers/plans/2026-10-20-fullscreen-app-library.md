@@ -109,7 +109,7 @@ Create a private landscape activity with black background, focusable Back contro
 
 Run: `env ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew assembleDebug --offline --console=plain`
 
-Expected: SUCCESS with no new runtime permission or exported activity. Install as an in-place update and verify six columns, filter reachability, mobile Netflix, add/remove round trip, long-press actions, Back, and App Info return using the projector remote.
+Expected: SUCCESS with no new runtime permission or exported activity. Install only as an in-place update at this stage; verify the private screen through the Home footer after Task 3 wires the real user path.
 
 - [ ] **Step 5: Commit the activity and visuals**
 

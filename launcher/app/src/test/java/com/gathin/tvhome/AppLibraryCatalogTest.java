@@ -66,4 +66,30 @@ public class AppLibraryCatalogTest {
         assertEquals(1, matches.size());
         assertEquals("com.netflix.mediaclient", matches.get(0).packageName);
     }
+
+    @Test public void changingHomeStateOnlyUpdatesTheSelectedPackage() {
+        String existingHome = "com.example.video";
+        String addedHome = "com.netflix.mediaclient";
+        HashSet<String> original = new HashSet<>(Collections.singletonList(existingHome));
+
+        HashSet<String> afterAdding = AppLibraryCatalog.withHomeState(original, addedHome, true);
+        HashSet<String> afterRemoving = AppLibraryCatalog.withHomeState(afterAdding, existingHome, false);
+
+        assertTrue(afterAdding.contains(existingHome));
+        assertTrue(afterAdding.contains(addedHome));
+        assertFalse(afterRemoving.contains(existingHome));
+        assertTrue(afterRemoving.contains(addedHome));
+        assertTrue(original.contains(existingHome));
+        assertFalse(original.contains(addedHome));
+    }
+
+    @Test public void filterKeepsSelectedPackageWhenItStillMatches() {
+        List<AppLibraryCatalog.Entry> catalog = Arrays.asList(
+                new AppLibraryCatalog.Entry("com.netflix.mediaclient", "Netflix", false, NOW),
+                new AppLibraryCatalog.Entry("com.amazon.amazonvideo.livingroom", "Prime Video", true, NOW));
+        List<AppLibraryCatalog.Entry> matches = AppLibraryCatalog.filter(catalog, "net");
+
+        assertEquals("com.netflix.mediaclient", AppLibraryCatalog.selectionAfterFilter(
+                matches, "com.netflix.mediaclient"));
+    }
 }
