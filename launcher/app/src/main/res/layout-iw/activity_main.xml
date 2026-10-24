@@ -115,6 +115,21 @@
         android:alpha="0">
 
         <TextView
+            android:id="@+id/reorderLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_marginEnd="3dp"
+            android:layout_marginBottom="6dp"
+            android:text="@string/reorder_active"
+            android:textAllCaps="true"
+            android:textColor="#B3FFFFFF"
+            android:textSize="11sp"
+            android:letterSpacing="0.16"
+            android:fontFamily="@font/outfit_medium"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/heroName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -126,6 +141,16 @@
             android:letterSpacing="-0.02"
             android:includeFontPadding="false"
             android:singleLine="true" />
+
+        <include
+            android:id="@+id/reorderHint"
+            layout="@layout/view_reorder_controls"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="right"
+            android:layout_marginEnd="3dp"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
 
         <!-- Cinematic shelf only: when the app was last opened, and the dock position dots. -->
         <TextView
@@ -371,4 +396,12 @@
         android:layout_height="10dp"
         android:alpha="0"
         android:importantForAccessibility="no" />
+    <include
+        android:id="@+id/reorderGridHint"
+        layout="@layout/view_reorder_controls"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone" />
 </FrameLayout>

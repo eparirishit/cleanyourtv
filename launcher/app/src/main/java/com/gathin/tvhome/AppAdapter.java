@@ -54,6 +54,8 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         /** Called for a D-pad direction key on a tile. Return true when handled (focus stays put). */
         boolean onTileVerticalKey(int position, int keyCode);
 
+        void onTileLongPressed(int position, View anchor);
+
         void onLibraryRequested();
         void onLibraryFocused();
         void onLibraryUp();
@@ -90,6 +92,11 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     static final float FOCUS_SCALE = 1.10f;
+
+    static boolean hasDashboardActions(int entryKind) {
+        return entryKind == Entry.APP;
+    }
+
     /** Design size of a tile (dp); tiles shrink from here when the columns don't fit, see tileWidthPx. */
     static final float DESIGN_W_DP = 180f, DESIGN_H_DP = 101f;
 
@@ -415,11 +422,16 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         }
         h.card.setOnClickListener(v -> launch(e));
         h.card.setOnLongClickListener(v -> {
-            Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                ctx.startActivity(i);
-            } catch (ActivityNotFoundException ignored) {
+            int tilePosition = h.getBindingAdapterPosition();
+            if (hasDashboardActions(e.kind) && listener != null && tilePosition != RecyclerView.NO_POSITION) {
+                listener.onTileLongPressed(tilePosition, v);
+            } else {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + e.pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    ctx.startActivity(i);
+                } catch (ActivityNotFoundException ignored) {
+                }
             }
             return true;
         });

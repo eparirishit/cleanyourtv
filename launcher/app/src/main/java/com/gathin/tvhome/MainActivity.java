@@ -197,6 +197,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private PopupWindow openPopup;
     /** Reorder mode is on (top-bar button). */
     private boolean reordering;
+    private boolean quickReordering;
     /** Key of the tile being carried in reorder mode, or null. */
     private String movingKey;
     /** Tile order when reorder mode started, to save only when something moved. */
@@ -816,7 +817,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     return true;
                 default:
                     if (ok || back) {
-                        if (!down) drop();
+                        if (!down) {
+                            if (quickReordering) endReorder();
+                            else drop();
+                        }
                         return true;
                     }
                     return super.dispatchKeyEvent(event);
@@ -852,6 +856,47 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!beginReorder()) return;
         focusTile(Math.max(0, Math.min(lastFocused, adapter.movableCount() - 1)));
         Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+    }
+
+    private void startReorderAt(int position) {
+        String selectedKey = adapter.keyAt(position);
+        if (selectedKey == null) return;
+        if (!beginReorder()) return;
+        int selectedPosition = adapter.positionOf(selectedKey);
+        if (selectedPosition < 0) {
+            endReorder();
+            return;
+        }
+        quickReordering = true;
+        glass.setAccent(0);
+        pickUp(selectedPosition);
+        updateReorderGuidance(selectedPosition);
+        refocusAfterLayout(selectedPosition);
+    }
+
+    private void updateReorderGuidance(int position) {
+        boolean onDock = dockRow && position >= 0 && position < COLUMNS;
+        showReorderGuidance(findViewById(R.id.reorderLabel), quickReordering && onDock);
+        showReorderGuidance(findViewById(R.id.reorderHint), quickReordering && onDock);
+        showReorderGuidance(findViewById(R.id.reorderGridHint), quickReordering && !onDock);
+    }
+
+    private void showReorderGuidance(View view, boolean visible) {
+        view.animate().cancel();
+        if (visible) {
+            if (view.getVisibility() != View.VISIBLE) {
+                view.setAlpha(0f);
+                view.setVisibility(View.VISIBLE);
+                view.post(this::restoreFocus);
+            }
+            view.animate().alpha(1f).setDuration(animations && !reducedMotion ? 160 : 0).start();
+        } else if (view.getVisibility() == View.VISIBLE) {
+            view.animate().alpha(0f).setDuration(animations && !reducedMotion ? 120 : 0)
+                    .withEndAction(() -> {
+                        view.setVisibility(View.GONE);
+                        restoreFocus();
+                    }).start();
+        }
     }
 
     /** The start shared by reorder and edit-dock mode. False when there is nothing to move. */
@@ -956,7 +1001,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** A tile's alpha: dim unless it is the carried one, or, in edit-dock mode, a dock tile other than the chosen place. */
     private float tileAlpha(int pos) {
         if (movingKey != null) {
-            return pos != RecyclerView.NO_POSITION && movingKey.equals(adapter.keyAt(pos)) ? 1f : 0.45f;
+            return pos != RecyclerView.NO_POSITION && movingKey.equals(adapter.keyAt(pos)) ? 1f
+                    : quickReordering ? 0.65f : 0.45f;
         }
         if (dockEditSlot >= 0 && pos >= 0 && pos < COLUMNS && pos != dockEditSlot) return 0.45f;
         return 1f;
@@ -965,6 +1011,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Ends the mode and saves the order if it changed since the mode started. */
     private void endReorder() {
         if (!reordering) return;
+        quickReordering = false;
+        updateReorderGuidance(-1);
         dockEditing = false;
         dockEditSlot = -1;
         drop();
@@ -994,9 +1042,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int from = adapter.positionOf(movingKey);
         int n = adapter.movableCount();
         if (from < 0 || from >= n) {
-            drop();
+            if (quickReordering) endReorder();
+            else drop();
             return;
         }
+        boolean horizontal = keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
+        if (quickReordering && horizontal && GridNavigation.atHorizontalEdge(from, n, COLUMNS,
+                rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT)) return;
         int to;
         // rtl_app_grid (Hebrew) mirrors the grid: position 0 is on the right, so Left moves towards the end.
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) to = rtlAppGrid ? from + 1 : from - 1;
@@ -1069,9 +1121,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override
+    public void onTileLongPressed(int position, View anchor) {
+        if (reordering || position < 0 || position >= adapter.movableCount()) return;
+        showTileActions(position, anchor);
+    }
+
+    @Override
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
+        updateReorderGuidance(position);
         // Focus restored before the first layout (cold start): the tile has no size yet, and the glass
         // would be sized to 2*pad. Run again once the tile is laid out.
         if (card.getWidth() == 0) {
@@ -2316,6 +2375,37 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
         dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
                 ? Gravity.START : Gravity.END);
+        rows.getChildAt(0).requestFocus();
+    }
+
+    private void showTileActions(int position, View anchor) {
+        String selectedKey = adapter.keyAt(position);
+        String packageName = adapter.packageAt(position);
+        if (selectedKey == null || packageName == null) return;
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (200 * density));
+        addSettingsMenuRow(rows, popup, R.string.reorder, () -> {
+            int selectedPosition = adapter.positionOf(selectedKey);
+            if (selectedPosition >= 0) startReorderAt(selectedPosition);
+        });
+        addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {
+            if (adapter.positionOf(selectedKey) < 0) return;
+            if (!LibraryApps.save(this, packageName, false)) {
+                Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
+                return;
+            }
+            reloadApps(false);
+        });
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
+        panel.setAlpha(0f);
+        panel.setPivotY(1f);
+        panel.setScaleY(0.92f);
+        panel.setTranslationY(8 * density);
+        popup.showAsDropDown(anchor, 0, -anchor.getHeight() - panel.getMeasuredHeight() - (int) (10 * density), Gravity.END);
+        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
         rows.getChildAt(0).requestFocus();
     }
 
