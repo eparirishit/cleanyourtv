@@ -4,25 +4,28 @@ Set `"app_library": true` in a theme’s `config.json`, or enable the `app_libra
 bool in `config.xml`. It is off by default. A small glass pill appears after the
 last row of Home apps.
 
-The horizontal library lists installed apps with a TV or ordinary Android launch
+The fullscreen, five-column library lists installed apps with a TV or ordinary Android launch
 activity, preferring the TV entry when both exist. It excludes services and apps
 without a launch activity. Ordinary Android apps may still need touch or a mouse.
 
-Apps missing from Home come first. Apps first installed within the last seven
-days lead that group, newest first, with a green dot; older missing apps are
-alphabetical. Apps already on Home follow alphabetically, with a checkmark and a
-subtle tint. Updating an existing app does not mark it as new.
+Tiles have no separate titles underneath. App names remain available to screen
+readers and the filter. Apps without banners retain their icon and in-tile label.
 
-- Press OK on a missing app to add it to Home. Focus advances to the next missing
-  app without following the new shortcut across the catalogue.
-- Press OK on a checked app to open it.
+Apps missing from Home come first. Apps first installed within the last seven
+days lead that group, newest first; older missing apps are alphabetical. Apps
+already on Home follow alphabetically, with a small Home badge. Updating an
+existing app does not mark it as new.
+
+- Press OK on a missing app to add it to Home. The selected app remains selected
+  when the catalogue is refreshed.
+- Press OK on an app already on Home to open it.
 - Hold OK for Open, Add to Home or Remove from Home, and App info. The menu uses
   the existing Inputs dropdown resources and stays over the selected card.
 - Back closes the menu first, then the library. Down from the last Home row or
   Right from the final app reaches the library pill; Up returns to the last row.
   Hebrew mirrors the horizontal direction, so Left from the final app reaches it.
 
-Every checked app can be removed from Home, including the theme’s default apps.
+Every app already on Home can be removed, including the theme’s default apps.
 It stays installed and remains in the library, where one press adds it back.
 There is no hidden-app section and no uninstall action.
 

@@ -262,7 +262,7 @@ public class AppLibraryActivity extends Activity {
                 holder.label.setText(entry.label);
                 holder.label.setVisibility(View.VISIBLE);
             }
-            holder.name.setText(entry.label);
+            holder.card.setContentDescription(entry.label);
             boolean onHome = isOnHome(entry);
             holder.homeBadge.setVisibility(AppLibraryPresentation.showHomeBadge(onHome)
                     ? View.VISIBLE : View.GONE);
@@ -303,7 +303,6 @@ public class AppLibraryActivity extends Activity {
                 holder.itemView.setLayoutParams(itemParams);
             }
             setWidthAndHeight(holder.card, geometry.tileWidthPx, geometry.tileHeightPx, 0);
-            setWidthAndHeight(holder.name, geometry.tileWidthPx, 22, geometry.tileHeightPx + dp(7));
             setWidthAndHeight(holder.status, geometry.tileWidthPx, 18, geometry.tileHeightPx + dp(29));
             FrameLayout.LayoutParams homeBadgeParams = (FrameLayout.LayoutParams) holder.homeBadge.getLayoutParams();
             int homeBadgeSize = dp(AppLibraryPresentation.homeBadgeDiameterDp());
@@ -327,7 +326,6 @@ public class AppLibraryActivity extends Activity {
         final ImageView icon;
         final TextView label;
         final ImageView homeBadge;
-        final TextView name;
         final TextView status;
 
         CatalogHolder(View view) {
@@ -344,7 +342,6 @@ public class AppLibraryActivity extends Activity {
             icon = view.findViewById(R.id.icon);
             label = view.findViewById(R.id.label);
             homeBadge = view.findViewById(R.id.homeBadge);
-            name = view.findViewById(R.id.name);
             status = view.findViewById(R.id.status);
         }
     }
