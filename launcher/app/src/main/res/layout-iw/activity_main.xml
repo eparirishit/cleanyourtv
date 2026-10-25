@@ -304,12 +304,22 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <include
+                android:id="@+id/weatherRow"
+                layout="@layout/view_weather"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/leftBlock"
+                android:layout_alignStart="@id/leftBlock"
+                android:layout_alignEnd="@id/leftBlock"
+                android:layout_marginTop="8dp" />
+
             <!-- Shown only when show_stats is on. Outside leftBlock, so the top buttons stay level with the clock
                  row; gone, it takes no space. -->
             <TextView
                 android:id="@+id/stats"
                 android:layout_width="0dp"
-                android:layout_below="@id/leftBlock"
+                android:layout_below="@id/weatherRow"
                 android:layout_alignStart="@id/leftBlock"
                 android:layout_alignEnd="@id/leftBlock"
                 android:gravity="right"

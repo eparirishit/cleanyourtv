@@ -4,6 +4,9 @@ An optional backdrop that follows the clock: night blues until dawn, a soft blue
 horizon that peaks just before eight in the evening. It is off in the built-in configuration, so a
 launcher built from this repository behaves exactly like before until a theme turns it on.
 
+This describes the fallback sky. The [weather background](weather.md) is enabled by default and
+takes precedence while current Philadelphia weather is available.
+
 ```json
 { "sky_intensity": 60 }
 ```
@@ -31,9 +34,8 @@ the default 60.
 
 `Sky` is pure maths — no Android types, no clock of its own; the caller passes the minutes since
 midnight, which is why the palette is unit-tested on the JVM. `SkyView` renders one 480×270 bitmap
-and redraws it once a minute, from the same minute tick that updates the clock. Nothing is animated
-and nothing is requested: the backdrop is the only change, and a TV with 1 GB of RAM has nothing to
-keep up with.
+and redraws it once a minute, from the same minute tick that updates the clock. The fallback sky
+has no animation or network requests; the weather background adds its own lightweight overlay.
 
 Turning the key off restores the plain background (or the theme's `wallpaper`/`background_color`)
 on the next Home start.

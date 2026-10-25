@@ -23,6 +23,7 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView animationsChoice;
     private TextView advancedChoice;
     private TextView followThemeChoice;
+    private TextView weatherChoice;
     private int columns;
     private int rowsBelowDock;
     private boolean animations;
@@ -72,6 +73,15 @@ public final class LauncherSettingsActivity extends Activity {
         wallpaperChoice = findViewById(R.id.wallpaperChoice);
         wallpaperChoice.setOnClickListener(v -> showWallpaperPicker());
         animationsChoice = findViewById(R.id.animationsChoice);
+        weatherChoice = findViewById(R.id.weatherChoice);
+        weatherChoice.setOnClickListener(view -> {
+            choices.edit().putBoolean(WeatherController.ENABLED_KEY,
+                    !choices.getBoolean(WeatherController.ENABLED_KEY, true)).apply();
+            setResult(RESULT_OK);
+            refresh();
+        });
+        findViewById(R.id.weatherCredit).setOnClickListener(view -> open(new Intent(Intent.ACTION_VIEW,
+                android.net.Uri.parse("https://open-meteo.com/"))));
         animationsChoice.setOnClickListener(v -> {
             animations = !animations;
             if (!animations) advancedEffects = false;
@@ -174,6 +184,8 @@ public final class LauncherSettingsActivity extends Activity {
     }
 
     private void refresh() {
+        weatherChoice.setText(getString(R.string.weather_background_state,
+                getString(choices.getBoolean(WeatherController.ENABLED_KEY, true) ? R.string.on : R.string.off)));
         for (int i = 0; i < columnChoices.length; i++) {
             columnChoices[i].setSelected(columns == i + 4);
         }

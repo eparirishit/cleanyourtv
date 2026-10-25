@@ -116,4 +116,16 @@
     <!-- Cinematic top shelf (cinematic_home): the line under the focused dock app's name; %1$s is when it was
          last opened, e.g. "5 minutes ago" or "yesterday, 9:40 pm". -->
     <string name="last_opened">Last opened %1$s</string>
+    <string name="weather_summary">Philadelphia\u2002·\u2002%1$s\u2002·\u2002%2$s</string>
+    <string name="weather_unavailable">Philadelphia\u2002·\u2002Weather unavailable</string>
+    <string name="weather_cached">\u2002·\u2002Cached</string>
+    <string name="weather_background_state">Weather background: %1$s</string>
+    <string name="weather_credit">Philadelphia current weather · Data by Open-Meteo (CC BY 4.0). Model-based conditions, refreshed every 15 minutes. Select to view the source.</string>
+    <string name="weather_clear">Clear</string>
+    <string name="weather_partly_cloudy">Partly cloudy</string>
+    <string name="weather_cloudy">Cloudy</string>
+    <string name="weather_fog">Fog</string>
+    <string name="weather_rain">Rain</string>
+    <string name="weather_snow">Snow</string>
+    <string name="weather_storm">Thunderstorms</string>
 </resources>

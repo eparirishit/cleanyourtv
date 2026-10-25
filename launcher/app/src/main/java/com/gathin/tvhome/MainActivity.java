@@ -10,6 +10,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -149,6 +150,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private String greetingName = "";
     /** Optional time-of-day backdrop (config.xml, sky_intensity); 0 keeps it hidden. */
     private SkyView sky;
+    private WeatherController weatherController;
+    private Weather.Snapshot currentWeather;
+    private SharedPreferences weatherChoices;
+    private TextView weatherSummary;
     private String vpnApp;
     private SpringAnimation springX, springY;
     private float glassTargetX, glassTargetY;
@@ -276,6 +281,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateRace();
             updateWifiLabel();
             sky.update();
+            weatherController.update();
             wallpaperPlayer.update();
             handler.postDelayed(this, MINUTE_MS);
         }
@@ -333,6 +339,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (!cfg.dockTitle) hero.setVisibility(View.GONE);
         greeting = findViewById(R.id.greeting);
         clockBlock = findViewById(R.id.leftBlock);
+        weatherChoices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        weatherSummary = findViewById(R.id.weatherSummary);
+        weatherController = new WeatherController(this, this::showWeather);
         greetingColor = greeting.getCurrentTextColor();
         btnWifi = findViewById(R.id.btnWifi);
         shamsiDate = findViewById(R.id.shamsiDate);
@@ -618,6 +627,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
+        weatherController.start();
+        sky.start(animations && !reducedMotion);
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -723,6 +734,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
+        weatherController.stop();
+        sky.stop();
         stopAmbientAnimation();
         hero.animate().cancel();
         ambient.animate().cancel();
@@ -758,6 +771,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onDestroy() {
         super.onDestroy();
         wallpaperPlayer.close();
+        weatherController.close();
         ConnectivityManager cm = getSystemService(ConnectivityManager.class);
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
@@ -783,6 +797,41 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         }
         return false;
+    }
+
+    private void showWeather(Weather.Snapshot snapshot) {
+        boolean enabled = weatherChoices.getBoolean(WeatherController.ENABLED_KEY, true);
+        currentWeather = enabled && snapshot != null && snapshot.usable(System.currentTimeMillis()) ? snapshot : null;
+        findViewById(R.id.weatherRow).setVisibility(enabled ? View.VISIBLE : View.GONE);
+        sky.setWeather(currentWeather);
+        boolean visible = currentWeather != null;
+        ambient.setVisibility(visible ? View.INVISIBLE : View.VISIBLE);
+        if (cinematic) {
+            heroArt.setVisibility(visible ? View.INVISIBLE : View.VISIBLE);
+            findViewById(R.id.heroScrim).setVisibility(visible ? View.INVISIBLE : View.VISIBLE);
+        }
+        if (visible) wallpaperPlayer.stop();
+        else wallpaperPlayer.start();
+        if (!enabled) return;
+        if (currentWeather == null) {
+            weatherSummary.setText(R.string.weather_unavailable);
+        } else {
+            int condition;
+            switch (currentWeather.scene) {
+                case PARTLY_CLOUDY: condition = R.string.weather_partly_cloudy; break;
+                case CLOUDY: condition = R.string.weather_cloudy; break;
+                case FOG: condition = R.string.weather_fog; break;
+                case RAIN: condition = R.string.weather_rain; break;
+                case SNOW: condition = R.string.weather_snow; break;
+                case STORM: condition = R.string.weather_storm; break;
+                default: condition = R.string.weather_clear;
+            }
+            String summary = getString(R.string.weather_summary, currentWeather.temperature(false), getString(condition));
+            if (System.currentTimeMillis() - currentWeather.observedAt > 30 * 60_000L) {
+                summary += getString(R.string.weather_cached);
+            }
+            weatherSummary.setText(summary);
+        }
     }
 
     // ---- reorder ---------------------------------------------------------------------------------
