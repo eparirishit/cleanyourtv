@@ -539,7 +539,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
                 button.setOnFocusChangeListener((view, focused) -> view.animate()
                         .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
-                        .setDuration(160).start());
+                        .setDuration(UiMotion.duration(animations, reducedMotion, 160)).start());
             }
         }
         if (festive) applyFestiveSkin((TextView) btnInputs, (TextView) btnSettings);
@@ -2178,7 +2178,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
             startActivity(i);
-        } catch (ActivityNotFoundException e) {
+        } catch (ActivityNotFoundException | SecurityException e) {
             Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
         }
     }
@@ -2363,12 +2363,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Drop in: fade and unfold from the top edge, hanging under the anchor pill. */
     private void dropIn(PopupWindow popup, View panel, View anchor, int gravity) {
+        int duration = UiMotion.duration(animations, reducedMotion, 160);
+        if (duration == 0) {
+            popup.showAsDropDown(anchor, 0, (int) (10 * density), gravity);
+            return;
+        }
         panel.setAlpha(0f);
         panel.setPivotY(0f);
         panel.setScaleY(0.92f);
         panel.setTranslationY(-8 * density);
         popup.showAsDropDown(anchor, 0, (int) (10 * density), gravity);
-        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
+        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(duration)
                 .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
     }
 
@@ -2411,34 +2416,31 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Keep a normal Settings click for the TV; the launcher's choices live behind hold OK. */
     private void showSettingsMenu() {
         View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        View panel = getLayoutInflater().inflate(R.layout.popup_context_menu, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
+        GlassMenu.addAction(rows, popup, R.string.launcher_settings, R.drawable.ic_home_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
-        if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
-        addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
+        if (moduleCards) GlassMenu.addAction(rows, popup, R.string.module_cards, R.drawable.ic_apps, this::showModuleCards);
+        if (dockRow) GlassMenu.addAction(rows, popup, R.string.dock_edit, R.drawable.ic_swap_vert, this::startDockEdit);
+        GlassMenu.addAction(rows, popup, R.string.reorder, R.drawable.ic_move, this::toggleReorder);
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
-        dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
-                ? Gravity.START : Gravity.END);
-        rows.getChildAt(0).requestFocus();
+        GlassMenu.show(popup, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
+                ? Gravity.START : Gravity.END, animations, reducedMotion);
     }
 
     private void showTileActions(int position, View anchor) {
         String selectedKey = adapter.keyAt(position);
         String packageName = adapter.packageAt(position);
         if (selectedKey == null || packageName == null) return;
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        View panel = getLayoutInflater().inflate(R.layout.popup_context_menu, root, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        addSettingsMenuRow(rows, popup, R.string.reorder, () -> {
+        GlassMenu.addAction(rows, popup, R.string.reorder, R.drawable.ic_move, () -> {
             int selectedPosition = adapter.positionOf(selectedKey);
             if (selectedPosition >= 0) startReorderAt(selectedPosition);
         });
-        addSettingsMenuRow(rows, popup, R.string.library_remove_shortcut, () -> {
+        GlassMenu.addAction(rows, popup, R.string.library_remove_shortcut, R.drawable.ic_remove_home, () -> {
             if (adapter.positionOf(selectedKey) < 0) return;
             if (!LibraryApps.save(this, packageName, false)) {
                 Toast.makeText(this, R.string.library_save_failed, Toast.LENGTH_LONG).show();
@@ -2446,45 +2448,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
             reloadApps(false);
         });
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
-        panel.setAlpha(0f);
-        panel.setPivotY(1f);
-        panel.setScaleY(0.92f);
-        panel.setTranslationY(8 * density);
-        popup.showAsDropDown(anchor, 0, -anchor.getHeight() - panel.getMeasuredHeight() - (int) (10 * density), Gravity.END);
-        panel.animate().alpha(1f).scaleY(1f).translationY(0f).setDuration(220)
-                .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f)).start();
-        rows.getChildAt(0).requestFocus();
-    }
-
-    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
-        row.findViewById(R.id.dot).setVisibility(View.GONE);
-        row.findViewById(R.id.status).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        row.setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        // The OK-up after opening the menu must not activate its first row.
-        final boolean[] pressed = {false};
-        row.setOnKeyListener((v, code, event) -> {
-            if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                if (event.getRepeatCount() == 0) pressed[0] = true;
-                return true;
-            }
-            boolean activate = pressed[0];
-            pressed[0] = false;
-            if (activate) {
-                popup.dismiss();
-                action.run();
-            }
-            return true;
-        });
-        rows.addView(row);
+        GlassMenu.addAction(rows, popup, R.string.library_app_info, R.drawable.ic_info, () -> open(new Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName))));
+        GlassMenu.show(popup, anchor, Gravity.END, animations, reducedMotion);
     }
 
     /**

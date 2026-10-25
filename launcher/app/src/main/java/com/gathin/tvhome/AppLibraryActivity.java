@@ -156,12 +156,18 @@ public class AppLibraryActivity extends Activity {
 
     private void showActions(AppLibraryCatalog.Entry entry, View anchor) {
         dismissActions();
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, grid, false);
+        View panel = getLayoutInflater().inflate(R.layout.popup_context_menu, grid, false);
         LinearLayout rows = panel.findViewById(R.id.rows);
-        addAction(rows, R.string.library_open, () -> open(entry));
-        addAction(rows, isOnHome(entry) ? R.string.library_remove_shortcut : R.string.library_add_home,
+        PopupWindow popup = new PopupWindow(panel, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true);
+        popup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        popup.setOutsideTouchable(true);
+        popup.setOnDismissListener(() -> actionPopup = null);
+        actionPopup = popup;
+        GlassMenu.addAction(rows, popup, R.string.library_open, R.drawable.ic_open, () -> open(entry));
+        GlassMenu.addAction(rows, popup, isOnHome(entry) ? R.string.library_remove_shortcut : R.string.library_add_home,
+                isOnHome(entry) ? R.drawable.ic_remove_home : R.drawable.ic_home_badge,
                 () -> changeHome(entry, !isOnHome(entry)));
-        addAction(rows, R.string.library_app_info, () -> {
+        GlassMenu.addAction(rows, popup, R.string.library_app_info, R.drawable.ic_info, () -> {
             dismissActions();
             try {
                 startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
@@ -170,22 +176,7 @@ public class AppLibraryActivity extends Activity {
                 Toast.makeText(this, getString(R.string.cant_open, entry.label), Toast.LENGTH_SHORT).show();
             }
         });
-        actionPopup = new PopupWindow(panel, dp(250), ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        actionPopup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        actionPopup.setOutsideTouchable(true);
-        actionPopup.setOnDismissListener(() -> actionPopup = null);
-        actionPopup.showAsDropDown(anchor, 0, -anchor.getHeight(), Gravity.END);
-        rows.getChildAt(0).requestFocus();
-    }
-
-    private void addAction(LinearLayout rows, int label, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        ((TextView) row.findViewById(R.id.title)).setText(label);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
-        row.findViewById(R.id.dot).setVisibility(View.GONE);
-        row.findViewById(R.id.status).setVisibility(View.GONE);
-        row.setOnClickListener(view -> action.run());
-        rows.addView(row);
+        GlassMenu.show(popup, anchor, Gravity.END, config.animations, config.reducedMotion);
     }
 
     private void dismissActions() {
@@ -276,10 +267,15 @@ public class AppLibraryActivity extends Activity {
             });
             holder.card.setOnFocusChangeListener((view, focused) -> {
                 if (focused) selectedPackage = entry.packageName;
-                float focusScale = AppLibraryPresentation.tileScale(focused);
+                int duration = UiMotion.duration(config.animations, config.reducedMotion, 160);
+                float focusScale = AppLibraryPresentation.tileScale(focused && duration > 0);
                 view.animate().cancel();
                 view.setTranslationZ(focused ? dp(6) : 0);
-                view.animate().scaleX(focusScale).scaleY(focusScale).setDuration(160).start();
+                if (duration > 0) view.animate().scaleX(focusScale).scaleY(focusScale).setDuration(duration).start();
+                else {
+                    view.setScaleX(focusScale);
+                    view.setScaleY(focusScale);
+                }
             });
             holder.card.setOnKeyListener((view, keyCode, event) -> {
                 if (event.getAction() != KeyEvent.ACTION_DOWN) return false;

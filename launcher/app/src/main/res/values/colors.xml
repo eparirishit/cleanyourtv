@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="glass_surface_top">#F23B424C</color>
+    <color name="glass_surface_bottom">#F51E232A</color>
+    <color name="glass_surface_border">#66FFFFFF</color>
+    <color name="glass_surface_focus_top">#F25D636D</color>
+    <color name="glass_surface_focus_bottom">#F5333942</color>
+    <color name="glass_control_top">#D6333B46</color>
+    <color name="glass_control_bottom">#E01A2028</color>
+    <color name="glass_control_border">#59FFFFFF</color>
+    <color name="glass_focus_top">#30FFFFFF</color>
+    <color name="glass_focus_bottom">#14FFFFFF</color>
+    <color name="glass_focus_border">#A6FFFFFF</color>
+    <color name="glass_pressed_top">#38FFFFFF</color>
+    <color name="glass_pressed_bottom">#24FFFFFF</color>
+    <color name="glass_pressed_border">#CCFFFFFF</color>
+    <color name="glass_text_primary">#FFFFFFFF</color>
+    <color name="glass_text_secondary">#B3FFFFFF</color>
+    <color name="glass_text_secondary_focused">#F2FFFFFF</color>
+</resources>

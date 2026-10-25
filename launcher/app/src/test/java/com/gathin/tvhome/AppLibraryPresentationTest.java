@@ -84,11 +84,12 @@ public class AppLibraryPresentationTest {
     }
 
     @Test
-    public void headerControlsUseTheSameFrostedWhiteFocusHighlight() throws Exception {
+    public void headerControlsUseTheSharedGlassFocusPalette() throws Exception {
         String drawable = new String(Files.readAllBytes(Paths.get(
                 "src/main/res/drawable/app_library_glass.xml")), StandardCharsets.UTF_8);
 
-        assertTrue(drawable.contains("#E6FFFFFF"));
+        assertTrue(drawable.contains("@color/glass_focus_border"));
+        assertTrue(drawable.contains("@color/glass_surface_focus_top"));
         assertFalse(drawable.contains("#B7D2FF"));
     }
 }
