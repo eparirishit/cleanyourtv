@@ -258,9 +258,7 @@ public class AppLibraryActivity extends Activity {
             holder.homeBadge.setVisibility(AppLibraryPresentation.showHomeBadge(onHome)
                     ? View.VISIBLE : View.GONE);
             holder.status.setVisibility(AppLibraryPresentation.showStatus() ? View.VISIBLE : View.GONE);
-            holder.card.setOnClickListener(view -> {
-                if (isOnHome(entry)) open(entry); else changeHome(entry, true);
-            });
+            holder.card.setOnClickListener(view -> open(entry));
             holder.card.setOnLongClickListener(view -> {
                 showActions(entry, view);
                 return true;

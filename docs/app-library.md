@@ -16,9 +16,7 @@ days lead that group, newest first; older missing apps are alphabetical. Apps
 already on Home follow alphabetically, with a small Home badge. Updating an
 existing app does not mark it as new.
 
-- Press OK on a missing app to add it to Home. The selected app remains selected
-  when the catalogue is refreshed.
-- Press OK on an app already on Home to open it.
+- Press OK on any app to open it without changing its Home membership.
 - Hold OK for Open, Add to Home or Remove from Home, and App info. The menu uses
   the existing Inputs dropdown resources and stays over the selected card.
 - Back closes the menu first, then the library. Down from the last Home row or
@@ -26,7 +24,7 @@ existing app does not mark it as new.
   Hebrew mirrors the horizontal direction, so Left from the final app reaches it.
 
 Every app already on Home can be removed, including the theme’s default apps.
-It stays installed and remains in the library, where one press adds it back.
+It stays installed and remains in the library, where Hold OK → Add to Home adds it back.
 There is no hidden-app section and no uninstall action.
 
 Choices are stored in the launcher’s private `library_apps.txt` and
