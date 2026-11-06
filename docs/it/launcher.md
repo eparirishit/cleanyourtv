@@ -20,8 +20,8 @@ apparecchio simile).
 
 ## Compilarlo da soli
 
-Servono JDK 17 e Android SDK platform 34. Su macOS: `brew install openjdk@17 android-commandlinetools` e
-`sdkmanager "platforms;android-34" "build-tools;34.0.0"`. Su Linux lo script di installazione trova
+Servono JDK 17, Android SDK platform 34 e Build Tools 36.0.0. Su macOS: `brew install openjdk@17 android-commandlinetools` e
+`sdkmanager "platforms;android-34" "build-tools;36.0.0"`. Su Linux lo script di installazione trova
 `~/Android/Sdk` e il `java` nel tuo PATH.
 
 ## Configurazione

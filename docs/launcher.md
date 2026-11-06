@@ -17,8 +17,9 @@ The **TV** needs Android 8.0 (API 26) or newer: `minSdk` is a compile-time floor
 
 ## Build it yourself
 
-It needs JDK 17 and Android SDK platform 34. On macOS: `brew install openjdk@17 android-commandlinetools`
-and `sdkmanager "platforms;android-34" "build-tools;34.0.0"`. On Linux the install script finds
+It needs JDK 17, Android SDK platform 34 and Build Tools 36.0.0. On macOS:
+`brew install openjdk@17 android-commandlinetools` and
+`sdkmanager "platforms;android-34" "build-tools;36.0.0"`. On Linux the install script finds
 `~/Android/Sdk` and the `java` on your PATH.
 
 ## Configure
