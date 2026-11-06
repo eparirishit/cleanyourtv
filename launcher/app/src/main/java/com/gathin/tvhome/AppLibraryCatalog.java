@@ -15,7 +15,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/** Shared source of all launchable apps for Home and the full-screen app library. */
+/** Catalogue of launchable apps for the full-screen library. */
 final class AppLibraryCatalog {
     static final class Entry {
         final ResolveInfo resolveInfo;
@@ -39,21 +39,24 @@ final class AppLibraryCatalog {
 
     private AppLibraryCatalog() { }
 
-    static List<Entry> load(Context context, Set<String> homePackages) {
+    static List<Entry> load(Context context, Set<String> homePackages, Config config) {
         PackageManager packageManager = context.getPackageManager();
-        List<Entry> leanback = entries(context, packageManager, Intent.CATEGORY_LEANBACK_LAUNCHER, true);
-        List<Entry> launcher = entries(context, packageManager, Intent.CATEGORY_LAUNCHER, false);
-        return mergeAndSort(leanback, launcher, homePackages, System.currentTimeMillis());
+        List<Entry> leanback = entries(context, packageManager, Intent.CATEGORY_LEANBACK_LAUNCHER, true, config);
+        List<Entry> launcher = entries(context, packageManager, Intent.CATEGORY_LAUNCHER, false, config);
+        return mergeAndSort(leanback, launcher, homePackages, System.currentTimeMillis(), config.appLibrarySelection);
     }
 
     static List<Entry> mergeAndSort(List<Entry> leanback, List<Entry> launcher,
-            Set<String> homePackages, long now) {
+            Set<String> homePackages, long now, boolean selection) {
         Map<String, Entry> unique = new LinkedHashMap<>();
         for (Entry entry : leanback) unique.putIfAbsent(entry.packageName, entry);
         for (Entry entry : launcher) unique.putIfAbsent(entry.packageName, entry);
         List<Entry> catalog = new ArrayList<>(unique.values());
         Collator collator = Collator.getInstance();
         Collections.sort(catalog, (first, second) -> {
+            if (selection) return LibraryApps.compareCatalog(
+                    homePackages.contains(first.packageName), first.label, first.packageName,
+                    homePackages.contains(second.packageName), second.label, second.packageName, collator);
             int priority = LibraryApps.comparePriority(homePackages.contains(first.packageName), first.installedAt,
                     homePackages.contains(second.packageName), second.installedAt, now);
             if (priority != 0) return priority;
@@ -86,16 +89,18 @@ final class AppLibraryCatalog {
     }
 
     private static List<Entry> entries(Context context, PackageManager packageManager, String category,
-            boolean leanback) {
+            boolean leanback, Config config) {
         List<Entry> result = new ArrayList<>();
         Intent intent = new Intent(Intent.ACTION_MAIN).addCategory(category);
         for (ResolveInfo info : packageManager.queryIntentActivities(intent, 0)) {
             if (info.activityInfo == null || !info.activityInfo.exported) continue;
             String packageName = info.activityInfo.packageName;
-            if (packageName.equals(context.getPackageName())) continue;
+            if (packageName.equals(context.getPackageName())
+                    || LibraryApps.excludedFromCatalog(config.libraryExcludedApps, packageName)) continue;
             String label;
             try {
-                label = Cards.cleanLabel(String.valueOf(info.loadLabel(packageManager)), packageName);
+                label = Cards.cleanLabel(config.appLabels.containsKey(packageName) ? config.appLabels.get(packageName)
+                        : String.valueOf(info.loadLabel(packageManager)), packageName);
             } catch (RuntimeException unavailable) {
                 label = packageName;
             }

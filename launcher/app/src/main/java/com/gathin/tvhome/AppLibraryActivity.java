@@ -2,15 +2,17 @@ package com.gathin.tvhome;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Outline;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -33,6 +35,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class AppLibraryActivity extends Activity {
     static final String EXTRA_HOME_PACKAGES = "com.gathin.tvhome.extra.HOME_PACKAGES";
@@ -48,6 +53,19 @@ public class AppLibraryActivity extends Activity {
     private PopupWindow actionPopup;
     private String selectedPackage;
     private Config config;
+    private final ExecutorService catalogWorker = Executors.newSingleThreadExecutor();
+    private Future<?> catalogLoad;
+    private int catalogRevision;
+    private final BroadcastReceiver packageReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            dismissActions();
+            refreshCatalog();
+        }
+    };
+
+    @Override protected void attachBaseContext(Context base) {
+        super.attachBaseContext(LauncherLocale.wrap(base));
+    }
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -73,7 +91,26 @@ public class AppLibraryActivity extends Activity {
             @Override public void onTextChanged(CharSequence text, int start, int before, int count) { applyFilter(); }
             @Override public void afterTextChanged(Editable text) { }
         });
-        refreshCatalog();
+    }
+
+    @Override protected void onStart() {
+        super.onStart();
+        IntentFilter packages = new IntentFilter(Intent.ACTION_PACKAGE_ADDED);
+        packages.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        packages.addAction(Intent.ACTION_PACKAGE_CHANGED);
+        packages.addDataScheme("package");
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(packageReceiver, packages, RECEIVER_NOT_EXPORTED);
+        else registerReceiver(packageReceiver, packages);
+    }
+
+    @Override protected void onStop() {
+        unregisterReceiver(packageReceiver);
+        super.onStop();
+    }
+
+    @Override protected void onDestroy() {
+        catalogWorker.shutdownNow();
+        super.onDestroy();
     }
 
     @Override protected void onResume() {
@@ -90,9 +127,18 @@ public class AppLibraryActivity extends Activity {
     }
 
     private void refreshCatalog() {
-        allApps.clear();
-        allApps.addAll(AppLibraryCatalog.load(this, homePackages));
-        applyFilter();
+        if (catalogLoad != null) catalogLoad.cancel(true);
+        int revision = ++catalogRevision;
+        HashSet<String> home = new HashSet<>(homePackages);
+        catalogLoad = catalogWorker.submit(() -> {
+            List<AppLibraryCatalog.Entry> catalog = AppLibraryCatalog.load(this, home, config);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed() || revision != catalogRevision) return;
+                allApps.clear();
+                allApps.addAll(catalog);
+                applyFilter();
+            });
+        });
     }
 
     private void applyFilter() {
@@ -137,6 +183,10 @@ public class AppLibraryActivity extends Activity {
         homePackages.addAll(updatedHome);
         setResult(RESULT_OK);
         selectedPackage = entry.packageName;
+        if (config.appLibrarySelection && !onHome) {
+            int next = LibraryApps.nextAfterRemoval(visibleApps.indexOf(entry), visibleApps.size());
+            if (next >= 0) selectedPackage = visibleApps.get(next).packageName;
+        }
         dismissActions();
         refreshCatalog();
     }
@@ -167,11 +217,10 @@ public class AppLibraryActivity extends Activity {
         GlassMenu.addAction(rows, popup, isOnHome(entry) ? R.string.library_remove_shortcut : R.string.library_add_home,
                 isOnHome(entry) ? R.drawable.ic_remove_home : R.drawable.ic_home_badge,
                 () -> changeHome(entry, !isOnHome(entry)));
-        GlassMenu.addAction(rows, popup, R.string.library_app_info, R.drawable.ic_info, () -> {
-            dismissActions();
+        Intent info = SystemSettings.appInfo(this, entry.packageName);
+        if (info != null) GlassMenu.addAction(rows, popup, R.string.library_app_info, R.drawable.ic_info, () -> {
             try {
-                startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                        Uri.parse("package:" + entry.packageName)));
+                startActivity(info);
             } catch (ActivityNotFoundException | SecurityException exception) {
                 Toast.makeText(this, getString(R.string.cant_open, entry.label), Toast.LENGTH_SHORT).show();
             }
@@ -258,8 +307,12 @@ public class AppLibraryActivity extends Activity {
             holder.homeBadge.setVisibility(AppLibraryPresentation.showHomeBadge(onHome)
                     ? View.VISIBLE : View.GONE);
             holder.status.setVisibility(AppLibraryPresentation.showStatus() ? View.VISIBLE : View.GONE);
-            holder.card.setOnClickListener(view -> open(entry));
-            holder.card.setOnLongClickListener(view -> {
+            holder.card.setOnClickListener(view -> {
+                boolean home = isOnHome(entry);
+                if (LibraryApps.okOpens(config.appLibrarySelection, config.libraryOkOpens, home)) open(entry);
+                else changeHome(entry, !home);
+            });
+            holder.card.setOnLongClickListener(config.appLibrarySelection ? null : view -> {
                 showActions(entry, view);
                 return true;
             });

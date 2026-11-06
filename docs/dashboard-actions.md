@@ -1,6 +1,7 @@
 # Dashboard app actions
 
-Hold OK on a dashboard app to open **Reorder apps**, **Remove from Home**, or **App info**.
+Hold OK or press Menu on a dashboard app to open **Reorder apps**, **Remove from Home**,
+or **App info**. Dock actions also appear when the dock is enabled.
 
 Reorder immediately picks up the selected app. Use the arrow buttons to move it;
 Left and Right stop at the row edges. Press OK or Back once to finish and save.
@@ -27,5 +28,9 @@ Animations off and Reduced motion disable popup transitions and smooth overflow 
 The same motion policy applies to library focus zoom. Navigation pills, Inputs, library controls,
 and Settings focus share the glass palette; selected settings keep their existing state markers.
 
-Module cards and the default-home shortcut retain their existing long-press
-behavior. The Settings menu's multi-app reorder and Edit dock flows remain available.
+Module cards use the upstream reorder behavior; the default-home shortcut is not movable. The Settings menu's multi-app reorder and Edit dock flows remain available.
+
+
+Fork design history: [tile actions design](superpowers/specs/2026-10-24-dashboard-tile-actions-design.md),
+[tile actions plan](superpowers/plans/2026-10-24-dashboard-tile-actions.md), and
+[glass consistency plan](superpowers/plans/2026-10-24-glass-consistency.md).
