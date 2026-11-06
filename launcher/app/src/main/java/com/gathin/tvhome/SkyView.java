@@ -15,6 +15,8 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Calendar;
 
 /**
@@ -121,6 +123,20 @@ public class SkyView extends View {
         else invalidate();
     }
 
+    /** Today's sunrise and sunset at the configured place, or null without one (fixed reference day). */
+    @Nullable
+    private int[] sunTimes() {
+        String lat = getContext().getString(R.string.latitude);
+        String lon = getContext().getString(R.string.longitude);
+        if (lat.isEmpty() || lon.isEmpty()) return null;
+        try {
+            return Sun.riseAndSet(LocalDate.now(), Double.parseDouble(lat), Double.parseDouble(lon),
+                    ZoneId.systemDefault());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private void render(boolean force) {
         Calendar now = Calendar.getInstance();
         int minute = weather != null ? weather.paletteMinute(System.currentTimeMillis())
@@ -128,7 +144,8 @@ public class SkyView extends View {
         if (!force && minute == lastMinute) return;
         lastMinute = minute;
 
-        Sky.Palette sky = Sky.at(minute);
+        int[] sun = weather == null ? sunTimes() : null;
+        Sky.Palette sky = sun == null ? Sky.at(minute) : Sky.at(minute, sun[0], sun[1]);
         if (texture == null) texture = Bitmap.createBitmap(TEX_W, TEX_H, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(texture);
         canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);

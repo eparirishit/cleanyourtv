@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.lang.reflect.Method;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.w3c.dom.Element;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -13,6 +15,27 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class AppLibraryPresentationTest {
+
+    @Test
+    public void forkDefaultsOpenAnAppMissingFromHome() throws Exception {
+        var config = DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                .parse(Paths.get("src/main/res/values/config.xml").toFile()).getElementsByTagName("bool");
+        boolean library = false;
+        boolean openAll = false;
+        boolean selection = false;
+        for (int i = 0; i < config.getLength(); i++) {
+            Element flag = (Element) config.item(i);
+            boolean enabled = Boolean.parseBoolean(flag.getTextContent().trim());
+            switch (flag.getAttribute("name")) {
+                case "app_library": library = enabled; break;
+                case "app_library_selection": selection = enabled; break;
+                case "library_ok_opens": openAll = enabled; break;
+                default: break;
+            }
+        }
+        assertTrue(library);
+        assertTrue(LibraryApps.okOpens(selection, openAll, false));
+    }
 
     @Test
     public void homeBadgeOnlyAppearsForAppsAlreadyOnHome() throws Exception {

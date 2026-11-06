@@ -1,4 +1,2 @@
-# Shrink and optimise, but keep class and method names: the size win comes from dropping unused
-# AndroidX code, not from renaming, and readable stack traces matter more in a sideloaded app
-# where crash reports arrive as screenshots.
--dontobfuscate
+# Shorten internal names in release builds to fit the APK size limit.
+# Use app/build/outputs/mapping/release/mapping.txt to retrace release stacks.

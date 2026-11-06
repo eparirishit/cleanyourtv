@@ -22,7 +22,7 @@ public class AppLibraryCatalogTest {
 
         List<AppLibraryCatalog.Entry> catalog = AppLibraryCatalog.mergeAndSort(
                 Collections.singletonList(leanback), Collections.singletonList(ordinary),
-                Collections.emptySet(), NOW);
+                Collections.emptySet(), NOW, false);
 
         assertEquals(1, catalog.size());
         assertTrue(catalog.get(0).leanback);
@@ -35,7 +35,7 @@ public class AppLibraryCatalogTest {
 
         List<AppLibraryCatalog.Entry> catalog = AppLibraryCatalog.mergeAndSort(
                 Collections.emptyList(), Collections.singletonList(mobileNetflix),
-                Collections.emptySet(), NOW);
+                Collections.emptySet(), NOW, false);
 
         assertEquals(1, catalog.size());
         assertEquals("com.netflix.mediaclient", catalog.get(0).packageName);
@@ -48,12 +48,17 @@ public class AppLibraryCatalogTest {
         AppLibraryCatalog.Entry home = new AppLibraryCatalog.Entry(
                 "com.example.video", "Video", true, NOW - 10);
 
+        HashSet<String> homePackages = new HashSet<>(Collections.singletonList(home.packageName));
         List<AppLibraryCatalog.Entry> catalog = AppLibraryCatalog.mergeAndSort(
-                Arrays.asList(home, missing), Collections.emptyList(),
-                new HashSet<>(Collections.singletonList(home.packageName)), NOW);
+                Arrays.asList(home, missing), Collections.emptyList(), homePackages, NOW, false);
 
         assertEquals(missing.packageName, catalog.get(0).packageName);
         assertEquals(home.packageName, catalog.get(1).packageName);
+
+        List<AppLibraryCatalog.Entry> picker = AppLibraryCatalog.mergeAndSort(
+                Arrays.asList(home, missing), Collections.emptyList(), homePackages, NOW, true);
+        assertEquals(home.packageName, picker.get(0).packageName);
+        assertEquals(missing.packageName, picker.get(1).packageName);
     }
 
     @Test public void filterTrimsAndMatchesLabelsWithoutCaseSensitivity() {
